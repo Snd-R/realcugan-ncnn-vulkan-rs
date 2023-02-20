@@ -107,10 +107,10 @@ impl RealCugan {
                  format!("{}/{}/up{}x-denoise{}x.param", models_path, model_dir, scale, noise))
             };
 
-           realcugan_init_gpu_instance();
+            realcugan_init_gpu_instance();
             let gpu_count = realcugan_get_gpu_count() as i32;
             if gpuid < -1 || gpuid >= gpu_count {
-               realcugan_destroy_gpu_instance();
+                realcugan_destroy_gpu_instance();
                 panic!("invalid gpu device")
             }
             let tile_size = if tile_size == 0 {
@@ -211,7 +211,7 @@ impl RealCugan {
                         h: in_buffer.h,
                         c: in_buffer.c,
                     };
-                   realcugan_process(
+                    realcugan_process(
                         self.realcugan,
                         &in_buffer as *const Image,
                         &out_buffer as *const Image,
@@ -220,20 +220,11 @@ impl RealCugan {
 
                     (out_buffer, mat)
                 } else {
-                    let scale_run_count = match self.scale {
-                        2 => 1,
-                        4 => 2,
-                        8 => 3,
-                        16 => 4,
-                        32 => 5,
-                        _ => { panic!("unexpected scale number") }
-                    };
-
                     let mut mat = std::ptr::null_mut();
                     let mut out_buffer = Image {
                         data: std::ptr::null_mut(),
-                        w: in_buffer.w * 2,
-                        h: in_buffer.h * 2,
+                        w: in_buffer.w * self.scale as i32,
+                        h: in_buffer.h * self.scale as i32,
                         c: i32::from(channels),
                     };
 
@@ -243,29 +234,6 @@ impl RealCugan {
                         &out_buffer as *const Image,
                         &mut mat,
                     );
-
-                    let mut tmp_image;
-                    let mut tmp_mat;
-                    for _ in 1..scale_run_count {
-                        tmp_image = out_buffer;
-                        tmp_mat = mat;
-
-                        out_buffer = Image {
-                            data: std::ptr::null_mut(),
-                            w: tmp_image.w * 2,
-                            h: tmp_image.h * 2,
-                            c: tmp_image.c,
-                        };
-
-                        realcugan_process(
-                            self.realcugan,
-                            &tmp_image as *const Image,
-                            &out_buffer as *const Image,
-                            &mut mat,
-                        );
-
-                        realcugan_free_image(tmp_mat);
-                    }
                     (out_buffer, mat)
                 };
 
